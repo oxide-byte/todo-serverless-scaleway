@@ -1,0 +1,10 @@
+[package]
+name = "todo-ui"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[dependencies]
+leptos = { version = "0.8.17", features = ["csr"] }
+uuid = { version = "1.22.0", features = ["v4", "js"] }
+instant = { version = "0.1.13", features = [ "wasm-bindgen", "inaccurate" ] }
