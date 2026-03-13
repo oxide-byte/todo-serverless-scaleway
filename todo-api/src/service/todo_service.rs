@@ -1,5 +1,4 @@
 use chrono::Utc;
-use serde::de::Unexpected::Option;
 use sqlx::PgPool;
 use tracing::instrument;
 use serde_json::{json, Value};
@@ -79,7 +78,7 @@ pub async fn edit_todo(
     if existing_todo.is_none() {
         return Err(format!("Todo [{}] not found", &item.id).into());
     }
-    
+
     let updated_todo = Todo {
         id: item.id,
         title: item.title,
@@ -88,7 +87,7 @@ pub async fn edit_todo(
         created: existing_todo.unwrap().created,
         updated: Some(Utc::now())
     };
-    
+
     match todo_repo.update_todo(updated_todo.clone()).await {
         Ok(_) => Ok(json!(updated_todo)),
         Err(e) => {

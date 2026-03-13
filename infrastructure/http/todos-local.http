@@ -1,8 +1,8 @@
-GET http://localhost:3000/
+GET http://localhost:8080/
 
 ####
 
-POST http://localhost:3000/
+POST http://localhost:8080/
 Content-Type: application/json
 
 {
@@ -12,7 +12,7 @@ Content-Type: application/json
 
 ###
 
-PUT http://localhost:3000/
+PUT http://localhost:8080/
 Content-Type: application/json
 
 {
@@ -24,8 +24,8 @@ Content-Type: application/json
 
 ###
 
-GET http://localhost:3000/?id=791b545d-9029-4522-9f42-8cc254d4b23e
+GET http://localhost:8080/?id=791b545d-9029-4522-9f42-8cc254d4b23e
 
 ###
 
-DELETE http://localhost:3000/?id=791b545d-9029-4522-9f42-8cc254d4b23e
+DELETE http://localhost:8080/?id=791b545d-9029-4522-9f42-8cc254d4b23e
