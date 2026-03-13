@@ -1,0 +1,31 @@
+GET http://localhost:3000/
+
+####
+
+POST http://localhost:3000/
+Content-Type: application/json
+
+{
+  "title": "title",
+  "description": "description"
+}
+
+###
+
+PUT http://localhost:3000/
+Content-Type: application/json
+
+{
+  "id": "791b545d-9029-4522-9f42-8cc254d4b23e",
+  "title": "title (Updated)",
+  "description": "description (Updated)",
+  "status": "Completed"
+}
+
+###
+
+GET http://localhost:3000/?id=791b545d-9029-4522-9f42-8cc254d4b23e
+
+###
+
+DELETE http://localhost:3000/?id=791b545d-9029-4522-9f42-8cc254d4b23e

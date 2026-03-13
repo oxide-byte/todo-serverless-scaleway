@@ -1,0 +1,10 @@
+services:
+  postgres:
+    container_name: postgres
+    build: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=todo
+      - POSTGRES_USER=todo
+      - POSTGRES_PASSWORD=password
