@@ -5,3 +5,9 @@
 # Rust Build
 /**/target
 /**/dist
+
+# Terraform
+/iac/.terraform
+/iac/.terraform.lock.hcl
+/iac/terraform.tfstate
+/iac/terraform.tfstate.backup

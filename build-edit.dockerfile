@@ -8,13 +8,13 @@ WORKDIR /usr/src/app
 COPY . .
 
 # Build the Rust application
-RUN cargo build --package todo-api --bin update-todo --release
+RUN cargo build --package todo-api --bin edit-todo --release
 
 # Use a smaller base image for the final container
 FROM alpine:3.21
 
 # Copy the compiled binary from the build stage
-COPY --from=builder /usr/src/app/target/release/update-todo /usr/local/bin/call-api
+COPY --from=builder /usr/src/app/target/release/edit-todo /usr/local/bin/call-api
 
 # Set the entrypoint command
 CMD ["call-api"]
