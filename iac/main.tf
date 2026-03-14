@@ -16,7 +16,8 @@ locals {
     { name = "get-all", dockerfile = "build-get-all.dockerfile", binary = "get-all-todo" },
     { name = "edit", dockerfile = "build-edit.dockerfile", binary = "edit-todo" }
   ]
-  db_url = "postgres://${var.access_key}:${var.secret_key}@${split("/", split("@", scaleway_sdb_sql_database.todo.endpoint)[1])[0]}/${var.db_name}?sslmode=require"
+  db_host = split(":", split("/", replace(scaleway_sdb_sql_database.todo.endpoint, "postgres://", ""))[0])[0]
+  db_url = "postgres://${urlencode(var.access_key)}:${urlencode(var.secret_key)}@${local.db_host}/${var.db_name}?sslmode=require"
 }
 
 resource "null_resource" "docker_build_push" {
@@ -69,7 +70,27 @@ resource "null_resource" "db_setup" {
     db_id     = scaleway_sdb_sql_database.todo.id
   }
 
+  # Increase retries for IAM propagation
   provisioner "local-exec" {
-    command = "psql ${local.db_url} -f ${data.local_file.init_sql.filename}"
+    environment = {
+      PGPASSWORD = var.secret_key
+      PGUSER     = var.access_key
+      PGHOST     = local.db_host
+      PGDATABASE = var.db_name
+      PGPORT     = "5432"
+      PGSSLMODE  = "require"
+    }
+    command = <<EOT
+      # No set -e at top to allow retry
+      for i in {1..20}; do
+        echo "Attempt $i: Connecting to $PGHOST as $PGUSER..."
+        if psql -f "${data.local_file.init_sql.filename}" 2>&1; then
+          exit 0
+        fi
+        echo "Database setup failed (attempt $i/20), retrying in 30 seconds..."
+        sleep 30
+      done
+      exit 1
+    EOT
   }
 }
