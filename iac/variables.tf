@@ -10,6 +10,11 @@ variable "project_id" {
   type = string
 }
 
+variable "region" {
+  type    = string
+  default = "fr-par"
+}
+
 variable "db_name" {
   type    = string
   default = "todo-db"

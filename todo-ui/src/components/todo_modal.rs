@@ -2,7 +2,7 @@ use leptos::prelude::*;
 use leptos::html::{Input, Textarea};
 use uuid::Uuid;
 use crate::components::EditTodoSignal;
-use crate::models::Todo;
+use crate::models::{Status, Todo};
 
 #[component]
 pub fn TodoModal<A,C>(todo: Option<Todo>, on_add: A, on_cancel: C) -> impl IntoView
@@ -27,16 +27,11 @@ where
             .as_ref()
             .map(|t| t.id.clone())
             .unwrap_or_else(|| Uuid::new_v4().to_string());
-        let created = current
-            .as_ref()
-            .map(|t| t.created)
-            .unwrap_or_else(instant::Instant::now);
-
         let new_item = Todo {
             id,
             title,
             description,
-            created,
+            status: Status::Active,
         };
 
         on_add(new_item);

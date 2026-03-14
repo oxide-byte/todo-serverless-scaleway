@@ -3,6 +3,7 @@ use crate::components::{EditTodoSignal, ShowTodoModalSignal, TodoListSignal};
 use crate::models::Todo;
 use crate::components::todo_modal::TodoModal;
 use crate::components::todo_list_item::TodoListItem;
+use crate::service::todo_service::TodoService;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -10,12 +11,33 @@ pub fn App() -> impl IntoView {
     let todos:TodoListSignal = RwSignal::new(Vec::new());
     let show_modal: ShowTodoModalSignal = RwSignal::new(false);
     let edit_todo_item: EditTodoSignal = RwSignal::new(None);
+    let service = StoredValue::new(TodoService::new());
+
+    Effect::new(move |_| {
+        let service = service.get_value();
+        leptos::task::spawn_local(async move {
+            if let Ok(data) = service.get_todos().await {
+                todos.set(data);
+            }
+        });
+    });
 
     let on_add_todo_event = move |todo: Todo| {
-        todos.update(|old|  {
-            old.retain(|x| x.id != todo.id);
-            old.push(todo);
-            old.sort_by(|a, b| a.created.cmp(&b.created));
+        let service = service.get_value();
+        let is_edit = edit_todo_item.get().is_some();
+        leptos::task::spawn_local(async move {
+            let result = if is_edit {
+                service.edit_todo(todo.clone()).await
+            } else {
+                service.insert_todo(todo.clone()).await
+            };
+
+            if result.is_ok() {
+                todos.update(|old|  {
+                    old.retain(|x| x.id != todo.id);
+                    old.push(todo);
+                });
+            }
         });
         show_modal.set(false);
     };
@@ -30,9 +52,15 @@ pub fn App() -> impl IntoView {
     };
 
     let on_delete_todo_event = move |todo : Todo| {
-        todos.update(|old| {
-            old.retain(|x| x.id != todo.id);
-        })
+        let service = service.get_value();
+        let id = todo.id.clone();
+        leptos::task::spawn_local(async move {
+            if service.delete_todo(id.clone()).await.is_ok() {
+                todos.update(|old| {
+                    old.retain(|x| x.id != id);
+                });
+            }
+        });
     };
 
     let on_edit_todo_event = move |todo : Todo| {

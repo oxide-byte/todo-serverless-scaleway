@@ -3,6 +3,8 @@ use todo_api::service::faas_service::setup_tracing;
 use sqlx::postgres::{PgPoolOptions, PgPool};
 use std::env;
 use axum::{routing::post, Router, extract::State, response::IntoResponse, Json};
+use tower_http::cors::{Any, CorsLayer};
+use http::Method;
 use todo_api::models::NewTodo;
 
 #[tokio::main]
@@ -19,6 +21,12 @@ async fn main() -> Result<(), Error> {
 
     let app = Router::new()
         .route("/", post(handler))
+        .layer(
+            CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS])
+                .allow_headers(Any),
+        )
         .with_state(pool);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();

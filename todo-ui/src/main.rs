@@ -2,6 +2,7 @@
 #![forbid(unsafe_code)]
 mod components;
 mod models;
+mod service;
 
 use crate::components::app::App;
 use leptos::prelude::*;

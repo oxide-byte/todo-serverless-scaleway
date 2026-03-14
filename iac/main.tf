@@ -25,6 +25,8 @@ resource "null_resource" "docker_build_push" {
 
   triggers = {
     dockerfile_hash = filemd5("${path.module}/../${each.value.dockerfile}")
+    source_hash     = sha1(join("", [for f in fileset("${path.module}/../todo-api/src", "**") : filebase64sha256("${path.module}/../todo-api/src/${f}")]))
+    cargo_hash      = filemd5("${path.module}/../todo-api/Cargo.toml")
   }
 
   provisioner "local-exec" {
@@ -60,37 +62,58 @@ resource "scaleway_sdb_sql_database" "todo" {
   max_cpu = 15
 }
 
-data "local_file" "init_sql" {
-  filename = "${path.module}/../infrastructure/postgres/init.sql"
+resource "random_id" "bucket" {
+  byte_length = 4
 }
 
-resource "null_resource" "db_setup" {
+resource "scaleway_object_bucket" "todo_ui" {
+  name = "todo-ui-${random_id.bucket.hex}"
+  region = var.region
+  force_destroy = true
+}
+
+resource "scaleway_object_bucket_website_configuration" "todo_ui" {
+  bucket = scaleway_object_bucket.todo_ui.name
+  region = var.region
+  index_document {
+    suffix = "index.html"
+  }
+}
+resource "scaleway_object_bucket_acl" "todo_ui" {
+  bucket = scaleway_object_bucket.todo_ui.name
+  region = var.region
+  acl    = "public-read"
+}
+
+resource "null_resource" "ui_build_upload" {
   triggers = {
-    file_hash = data.local_file.init_sql.content_md5
-    db_id     = scaleway_sdb_sql_database.todo.id
+    # Trigger on source code changes
+    ui_hash = sha1(join("", [for f in fileset("${path.module}/../todo-ui/src", "**") : filebase64sha256("${path.module}/../todo-ui/src/${f}")]))
+    # Trigger on function URL changes
+    add_url      = scaleway_container.todo["add"].domain_name
+    delete_url   = scaleway_container.todo["delete"].domain_name
+    get_all_url  = scaleway_container.todo["get-all"].domain_name
+    edit_url     = scaleway_container.todo["edit"].domain_name
   }
 
-  # Increase retries for IAM propagation
   provisioner "local-exec" {
+    working_dir = "${path.module}/../todo-ui"
     environment = {
-      PGPASSWORD = var.secret_key
-      PGUSER     = var.access_key
-      PGHOST     = local.db_host
-      PGDATABASE = var.db_name
-      PGPORT     = "5432"
-      PGSSLMODE  = "require"
+      URL_FAAS_ADD          = "https://${scaleway_container.todo["add"].domain_name}"
+      URL_FAAS_DELETE       = "https://${scaleway_container.todo["delete"].domain_name}"
+      URL_FAAS_GET_ALL      = "https://${scaleway_container.todo["get-all"].domain_name}"
+      URL_FAAS_EDIT         = "https://${scaleway_container.todo["edit"].domain_name}"
+      AWS_ACCESS_KEY_ID     = var.access_key
+      AWS_SECRET_ACCESS_KEY = var.secret_key
+      AWS_DEFAULT_REGION    = var.region
     }
     command = <<EOT
-      # No set -e at top to allow retry
-      for i in {1..20}; do
-        echo "Attempt $i: Connecting to $PGHOST as $PGUSER..."
-        if psql -f "${data.local_file.init_sql.filename}" 2>&1; then
-          exit 0
-        fi
-        echo "Database setup failed (attempt $i/20), retrying in 30 seconds..."
-        sleep 30
-      done
-      exit 1
+      trunk build --release
+      # Using aws-cli or scw CLI to upload to S3 compatible bucket
+      # Assuming scw or aws cli is available and configured
+      aws s3 sync dist/ s3://${scaleway_object_bucket.todo_ui.name} --endpoint-url https://s3.${var.region}.scw.cloud --acl public-read
     EOT
   }
+
+  depends_on = [scaleway_container.todo, scaleway_object_bucket.todo_ui]
 }

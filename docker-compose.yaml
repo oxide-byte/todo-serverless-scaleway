@@ -1,0 +1,66 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: todo-db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./infrastructure/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  get-all:
+    build:
+      context: .
+      dockerfile: build-get-all.dockerfile
+    ports:
+      - "8081:8080"
+    environment:
+      DATABASE_URL: postgres://user:password@db:5432/todo-db
+    depends_on:
+      - db
+
+  get:
+    build:
+      context: .
+      dockerfile: build-get.dockerfile
+    ports:
+      - "8082:8080"
+    environment:
+      DATABASE_URL: postgres://user:password@db:5432/todo-db
+    depends_on:
+      - db
+
+  add:
+    build:
+      context: .
+      dockerfile: build-add.dockerfile
+    ports:
+      - "8083:8080"
+    environment:
+      DATABASE_URL: postgres://user:password@db:5432/todo-db
+    depends_on:
+      - db
+
+  edit:
+    build:
+      context: .
+      dockerfile: build-edit.dockerfile
+    ports:
+      - "8084:8080"
+    environment:
+      DATABASE_URL: postgres://user:password@db:5432/todo-db
+    depends_on:
+      - db
+
+  delete:
+    build:
+      context: .
+      dockerfile: build-delete.dockerfile
+    ports:
+      - "8085:8080"
+    environment:
+      DATABASE_URL: postgres://user:password@db:5432/todo-db
+    depends_on:
+      - db
