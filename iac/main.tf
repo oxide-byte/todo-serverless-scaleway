@@ -16,8 +16,14 @@ locals {
     { name = "get-all", dockerfile = "build-get-all.dockerfile", binary = "get-all-todo" },
     { name = "edit", dockerfile = "build-edit.dockerfile", binary = "edit-todo" }
   ]
-  db_host = split(":", split("/", replace(scaleway_sdb_sql_database.todo.endpoint, "postgres://", ""))[0])[0]
-  db_url = "postgres://${urlencode(var.access_key)}:${urlencode(var.secret_key)}@${local.db_host}/${var.db_name}?sslmode=require"
+
+  db_endpoint_no_proto = replace(scaleway_sdb_sql_database.todo.endpoint, "postgres://", "")
+  db_host_part = strcontains(local.db_endpoint_no_proto, "@") ? split("@", local.db_endpoint_no_proto)[1] : local.db_endpoint_no_proto
+  db_id = split(".", local.db_host_part)[0]
+
+  db_url = "postgres://${scaleway_iam_application.db_app.id}:${scaleway_iam_api_key.db_key.secret_key}@${local.db_host_part}"
+
+  db_url_with_options = "postgres://${scaleway_iam_application.db_app.id}:${scaleway_iam_api_key.db_key.secret_key}@${local.db_id}.pg.sdb.fr-par.scw.cloud:5432/${var.db_name}?sslmode=require&options=databaseid%3D${local.db_id}"
 }
 
 resource "null_resource" "docker_build_push" {
@@ -31,11 +37,28 @@ resource "null_resource" "docker_build_push" {
 
   provisioner "local-exec" {
     command = <<EOT
-      docker build -t ${scaleway_registry_namespace.todo.endpoint}/${each.value.name}:latest -f ../${each.value.dockerfile} ..
-      docker login ${scaleway_registry_namespace.todo.endpoint} -u nologin -p ${var.secret_key}
+      docker build --platform linux/amd64 -t ${scaleway_registry_namespace.todo.endpoint}/${each.value.name}:latest -f ../${each.value.dockerfile} ..
+      echo "${var.secret_key}" | docker login ${scaleway_registry_namespace.todo.endpoint} -u nologin --password-stdin
       docker push ${scaleway_registry_namespace.todo.endpoint}/${each.value.name}:latest
     EOT
   }
+}
+
+resource "null_resource" "db_init" {
+  triggers = {
+    schema_hash = filemd5("${path.module}/../infrastructure/postgres/init.sql")
+    db_url      = local.db_url_with_options
+  }
+
+  provisioner "local-exec" {
+    environment = {
+      PGPASSWORD = scaleway_iam_api_key.db_key.secret_key
+    }
+
+    command = "sleep 90 && psql \"postgres://${scaleway_iam_application.db_app.id}@${local.db_id}.pg.sdb.fr-par.scw.cloud:5432/${var.db_name}?sslmode=require&options=databaseid%3D${local.db_id}\" -f ../infrastructure/postgres/init.sql"
+  }
+
+  depends_on = [scaleway_sdb_sql_database.todo, scaleway_iam_api_key.db_key]
 }
 
 resource "scaleway_container" "todo" {
@@ -44,22 +67,46 @@ resource "scaleway_container" "todo" {
   namespace_id = scaleway_container_namespace.main.id
   registry_image = "${scaleway_registry_namespace.todo.endpoint}/${each.value.name}:latest"
   port         = 8080
-  cpu_limit    = 140
-  memory_limit = 256
+  cpu_limit    = 100
+  memory_limit = 128
   min_scale    = 0
-  max_scale    = 5
+  max_scale    = 3
   timeout      = 60
+  deploy       = true
 
   environment_variables = {
-    DATABASE_URL = local.db_url
+    DATABASE_URL = local.db_url_with_options
   }
 
-  depends_on = [null_resource.docker_build_push]
+  depends_on = [null_resource.docker_build_push, null_resource.db_init]
 }
 
 resource "scaleway_sdb_sql_database" "todo" {
   name    = var.db_name
   max_cpu = 15
+}
+
+resource "scaleway_iam_application" "db_app" {
+  name            = "db-application-todo"
+  organization_id = var.organization_id
+}
+
+resource "scaleway_iam_api_key" "db_key" {
+  application_id = scaleway_iam_application.db_app.id
+  expires_at     = "2026-09-15T18:46:00Z" # 6 months from current date (2026-03-15)
+}
+
+resource "scaleway_iam_policy" "db_policy" {
+  name            = "allow-db-access-todo"
+  description     = "Grants access to the serverless SQL database"
+  organization_id = var.organization_id
+
+  rule {
+    permission_set_names = ["ServerlessSQLDatabaseReadWrite"]
+    project_ids          = [var.project_id]
+  }
+
+  application_id = scaleway_iam_application.db_app.id
 }
 
 resource "random_id" "bucket" {

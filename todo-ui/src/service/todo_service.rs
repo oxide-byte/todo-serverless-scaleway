@@ -1,5 +1,5 @@
 use std::error::Error;
-use reqwest::header::{ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_METHODS, ACCESS_CONTROL_ALLOW_ORIGIN, CONTENT_TYPE, HeaderMap, HeaderValue};
+use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
 use crate::models::Todo;
 
 #[derive(Clone)]
@@ -27,8 +27,6 @@ impl TodoService {
 
         let response = client
             .get(self.url_faas_get_all.clone())
-            .headers(construct_headers())
-            //.fetch_mode_no_cors()
             .send()
             .await?;
 
@@ -53,7 +51,6 @@ impl TodoService {
 
         let response = client
             .delete(format!("{}?id={}", self.url_faas_delete, id))
-            .headers(construct_headers())
             .send()
             .await?;
 
@@ -113,10 +110,5 @@ impl TodoService {
 fn construct_headers() -> HeaderMap {
     let mut headers = HeaderMap::new();
     headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-    headers.insert(ACCESS_CONTROL_ALLOW_ORIGIN, HeaderValue::from_static("*"));
-    // For local tests add this header:
-    // headers.insert(ACCESS_CONTROL_ALLOW_HEADERS, HeaderValue::from_static("access-control-allow-headers, access-control-allow-methods, access-control-allow-origin, access-control-allow-credentials, content-type"));
-    headers.insert(ACCESS_CONTROL_ALLOW_METHODS, HeaderValue::from_static("PUT, GET, HEAD, POST, DELETE, OPTIONS"));
-    headers.insert(ACCESS_CONTROL_ALLOW_CREDENTIALS,HeaderValue::from_static("true"));
     headers
 }

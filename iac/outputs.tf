@@ -3,16 +3,16 @@ output "db_endpoint" {
 }
 
 output "db_user" {
-  value = var.access_key
+  value = scaleway_iam_application.db_app.id
 }
 
 output "db_password" {
-  value     = var.secret_key
+  value     = scaleway_iam_api_key.db_key.secret_key
   sensitive = true
 }
 
 output "db_url" {
-  value     = local.db_url
+  value     = local.db_url_with_options
   sensitive = true
 }
 

@@ -16,7 +16,7 @@ impl TodoRepository {
     pub async fn get_all(&self) -> Result<Vec<Todo>, Error> {
         let todos = sqlx::query_as::<_, Todo>(
             r#"
-            SELECT id, title, description, status, created, updated
+            SELECT id, owner, title, description, status, created, updated
             FROM todo.todo
             "#
         )
@@ -30,7 +30,7 @@ impl TodoRepository {
         let uuid = uuid::Uuid::parse_str(id)?;
         let todo = sqlx::query_as::<_, Todo>(
             r#"
-            SELECT id, title, description, status, created, updated
+            SELECT id, owner, title, description, status, created, updated
             FROM todo.todo
             WHERE id = $1
             "#
@@ -50,7 +50,7 @@ impl TodoRepository {
             "#
         )
         .bind(todo.id)
-        .bind("default_owner")
+        .bind(todo.owner)
         .bind(todo.title)
         .bind(todo.description)
         .bind(todo.status)
@@ -107,7 +107,7 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn pg_get_todo_list() {
-        let pool = PgPool::connect("postgres://todo:password@localhost:5432/todo").await.unwrap();
+        let pool = PgPool::connect("postgres://user:password@localhost:5432/todo-db").await.unwrap();
         let todo_repository = TodoRepository::new(pool);
         let todos = todo_repository.get_all().await.unwrap();
         println!("{:?}", todos);

@@ -26,6 +26,7 @@ pub struct EditTodo {
 #[derive(Clone, Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Todo {
     pub id: Uuid,
+    pub owner: String,
     pub title: String,
     pub description: String,
     pub status: Status,
@@ -42,6 +43,7 @@ impl Todo {
     pub fn new(title: String, description: String) -> Todo {
         Todo {
             id: Uuid::new_v4(),
+            owner: "default_owner".to_string(),
             title,
             description,
             status: Status::Active,

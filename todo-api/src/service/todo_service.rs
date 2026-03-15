@@ -84,7 +84,8 @@ pub async fn edit_todo(
         title: item.title,
         description: item.description,
         status: item.status,
-        created: existing_todo.unwrap().created,
+        created: existing_todo.clone().unwrap().created,
+        owner: existing_todo.clone().unwrap().owner,
         updated: Some(Utc::now())
     };
 

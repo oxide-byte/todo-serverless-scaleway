@@ -13,6 +13,9 @@ RUN cargo build --package todo-api --bin edit-todo --release
 # Use a smaller base image for the final container
 FROM alpine:3.21
 
+# Install CA certificates to support TLS
+RUN apk add --no-cache ca-certificates
+
 # Copy the compiled binary from the build stage
 COPY --from=builder /usr/src/app/target/release/edit-todo /usr/local/bin/call-api
 

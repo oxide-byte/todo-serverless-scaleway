@@ -10,6 +10,10 @@ variable "project_id" {
   type = string
 }
 
+variable "organization_id" {
+  type = string
+}
+
 variable "region" {
   type    = string
   default = "fr-par"
