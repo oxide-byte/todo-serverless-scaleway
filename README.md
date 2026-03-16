@@ -134,3 +134,9 @@ adding to the website_url /index.html access you to the website:
 - https://www.scaleway.com/en/docs/tutorials/nextjs-app-serverless-functions-sqldb/
 - https://www.scaleway.com/en/docs/tutorials/nextjs-app-serverless-functions-sqldb/#deploy-a-next.js-application-using-terraform-templates
 - https://www.scaleway.com/en/docs/ai-search/
+
+## Improvements
+
+This is a simple POC, there is still room for improvements.
+
+This application has 5 functions (add/delete/edit/get/get_all), but could be joined in a single one. This is only for showcase. A single function would reduce cold starts. The advantage of multiple functions, you could define each function a different CPU/Memory value with different execution costs.
